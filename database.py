@@ -1,39 +1,57 @@
-import psycopg2
 import os
-from dotenv import load_dotenv
-
-load_dotenv()
+import psycopg2
+from psycopg2 import extras
 
 class DatabaseManager:
     def __init__(self):
-        self.conn = psycopg2.connect(os.getenv("DATABASE_URL"))
-        self.create_table()
+        # این آدرس را از تنظیمات Render (External Database URL) بردارید
+        self.db_url = os.getenv("DATABASE_URL")
+        if not self.db_url:
+            raise Exception("DATABASE_URL environment variable is not set!")
+        
+        # Render گاهی اوقات از پروتکل postgres استفاده می‌کند در حالی که psycopg2 نیاز به postgresql دارد
+        if self.db_url.startswith("postgres://"):
+            self.db_url = self.db_url.replace("postgres://", "postgresql://", 1)
+        
+        self._create_tables()
 
-    def create_table(self):
-        with self.conn.cursor() as cur:
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS users (
-                    user_id BIGINT PRIMARY KEY,
-                    first_name TEXT,
-                    last_name TEXT,
-                    language TEXT
-                );
-            """)
-            self.conn.commit()
+    def _get_connection(self):
+        return psycopg2.connect(self.db_url)
 
-    def save_user(self, user_id, first_name, last_name, lang):
-        with self.conn.cursor() as cur:
-            cur.execute("""
-                INSERT INTO users (user_id, first_name, last_name, language)
-                VALUES (%s, %s, %s, %s)
-                ON CONFLICT (user_id) DO UPDATE 
-                SET first_name = EXCLUDED.first_name, 
-                    last_name = EXCLUDED.last_name,
-                    language = EXCLUDED.language;
-            """, (user_id, first_name, last_name, lang))
-            self.conn.commit()
+    def _create_tables(self):
+        """ایجاد جداول در صورت عدم وجود"""
+        query = """
+        CREATE TABLE IF NOT EXISTS users (
+            user_id BIGINT PRIMARY KEY,
+            username TEXT,
+            first_name TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+        """
+        with self._get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(query)
+            conn.commit()
 
     def get_user(self, user_id):
-        with self.conn.cursor() as cur:
-            cur.execute("SELECT * FROM users WHERE user_id = %s", (user_id,))
-            return cur.fetchone()
+        """بررسی وجود کاربر در دیتابیس"""
+        query = "SELECT * FROM users WHERE user_id = %s;"
+        with self._get_connection() as conn:
+            with conn.cursor(cursor_factory=extras.DictCursor) as cur:
+                cur.execute(query, (user_id,))
+                return cur.fetchone()
+
+    def add_user(self, user_id, username, first_name):
+        """ثبت کاربر جدید"""
+        query = """
+        INSERT INTO users (user_id, username, first_name) 
+        VALUES (%s, %s, %s) 
+        ON CONFLICT (user_id) DO NOTHING;
+        """
+        with self._get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(query, (user_id, username, first_name))
+            conn.commit()
+
+# نمونه‌سازی از کلاس برای استفاده در بقیه فایل‌ها
+db = DatabaseManager()
