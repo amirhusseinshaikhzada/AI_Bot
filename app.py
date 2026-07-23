@@ -61,39 +61,34 @@ def handle_message(message):
 
 # --- بخش تنظیمات Webhook (اتصال تلگرام به Flask) ---
 
-@app.route('/' + TOKEN, methods=['POST'])
-def webhook():
-    # این تابع پیام‌ها را از تلگرام می‌گیرد و به کتابخانه Telebot می‌دهد
-    if request.headers.get('content-type') == 'application/json':
-        json_string = request.get_data().decode('utf-8')
-        update = telebot.types.Update.de_json(json_string)
-        bot.process_new_updates([update])
-        return '!', 200
-    else:
-        return '!', 400
+# --- بخش تنظیمات Webhook (اتصال تلگرام به Flask) ---
 
+# فقط یک مسیر اصلی تعریف می‌کنیم که هم GET (برای تست) و هم POST (برای تلگرام) را بپذیرد
 @app.route('/', methods=['GET', 'POST'])
-def index():
+def webhook():
     if request.method == 'POST':
-        # اینجا باید منطق دریافت پیام از تلگرام قرار بگیرد
-        # یا اگر از کتابخانه Telebot استفاده می‌کنید، 
-        # باید تابع webhook را اینجا صدا بزنید
-        bot.process_new_updates() 
-        return "OK", 200
-    return "Bot is running!"
+        # اگر تلگرام درخواست POST فرستاد (پیام جدید)
+        if request.headers.get('content-type') == 'application/json':
+            json_string = request.get_data().decode('utf-8')
+            update = telebot.types.Update.de_json(json_string)
+            bot.process_new_updates([update])
+            return 'OK', 200
+        else:
+            return 'Bad Request', 400
+    
+    # اگر کسی آدرس را در مرورگر باز کرد (GET)
+    return "Bot is running! Webhook is active."
 
 # تابع برای تنظیم اولیه Webhook
 def set_webhook():
     bot.remove_webhook()
-    bot.set_webhook(url=f"{WEBHOOK_URL}/{TOKEN}")
-    print(f"Webhook set to: {WEBHOOK_URL}/{TOKEN}")
+    # توجه: اینجا دیگر از TOKEN در انتهای URL استفاده نمی‌کنیم تا با مسیر اصلی ما یکی باشد
+    bot.set_webhook(url=WEBHOOK_URL) 
+    print(f"Webhook set to: {WEBHOOK_URL}")
 
 if __name__ == "__main__":
     # در اولین اجرا، Webhook را ست می‌کنیم
-    # نکته: در هاست واقعی، این کار را فقط یکبار انجام دهید
     set_webhook()
     
-    # اجرای Flask
-    # پورت باید با پورت هاست شما (مثلا 5000 یا 8080) هماهنگ باشد
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
