@@ -49,12 +49,23 @@ def callback_lang(call):
 
 @bot.message_handler(func=lambda message: True)
 def handle_message(message):
-    bot.reply_to(message, "I received your message! Testing...")
+    print(f"--- 5. Inside handle_message. User ID: {message.from_user.id} ---")
     
-    user_lang = user[3]
-    bot.send_chat_action(message.chat.id, 'typing')
-    ai_response = ai.get_response(message.text, user_lang)
-    bot.reply_to(message, ai_response)
+    try:
+        user = db.get_user(message.from_user.id)
+        print(f"--- 6. Database check done. User found: {bool(user)} ---") # بررسی وجود کاربر
+        
+        if not user:
+            print("--- 7. User not found in DB. Sending /start prompt ---")
+            bot.reply_to(message, "Please use /start first.")
+            return
+        
+        # بقیه کد شما...
+        print("--- 8. Proceeding to AI/Logic ---")
+        bot.reply_to(message, "Hello! I am working!") # یک پاسخ ساده برای تست
+        
+    except Exception as e:
+        print(f"!!! ERROR in handle_message: {e}")
 
 # --- بخش تنظیمات Webhook (اتصال تلگرام به Flask) ---
 
@@ -64,17 +75,23 @@ def handle_message(message):
 @app.route('/', methods=['GET', 'POST'])
 def webhook():
     if request.method == 'POST':
-        # اگر تلگرام درخواست POST فرستاد (پیام جدید)
+        print("--- 1. POST Request Received ---") # لاگ مرحله اول
         if request.headers.get('content-type') == 'application/json':
             json_string = request.get_data().decode('utf-8')
+            print("--- 2. JSON Data Received ---") # لاگ مرحله دوم
             update = telebot.types.Update.de_json(json_string)
-            bot.process_new_updates([update])
+            print(f"--- 3. Update Decoded: {update.message.text if update.message else 'No message text'} ---") # لاگ متن پیام
+            
+            try:
+                bot.process_new_updates([update])
+                print("--- 4. process_new_updates Completed Successfully ---") # لاگ مرحله چهارم
+            except Exception as e:
+                print(f"!!! ERROR during processing: {e}") # اگر خطایی رخ دهد اینجا چاپ می‌شود
+                
             return 'OK', 200
-        else:
-            return 'Bad Request', 400
-    
-    # اگر کسی آدرس را در مرورگر باز کرد (GET)
-    return "Bot is running! Webhook is active."
+        print("--- Error: Not a JSON Request ---")
+        return 'Bad Request', 400
+    return "Bot is running!"
 
 # تابع برای تنظیم اولیه Webhook
 def set_webhook():
