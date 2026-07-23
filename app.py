@@ -49,10 +49,7 @@ def callback_lang(call):
 
 @bot.message_handler(func=lambda message: True)
 def handle_message(message):
-    user = db.get_user(message.from_user.id)
-    if not user:
-        bot.reply_to(message, "Please use /start first.")
-        return
+    bot.reply_to(message, "I received your message! Testing...")
     
     user_lang = user[3]
     bot.send_chat_action(message.chat.id, 'typing')
