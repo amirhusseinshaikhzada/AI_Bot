@@ -72,9 +72,15 @@ def webhook():
     else:
         return '!', 400
 
-@app.route('/')
+@app.route('/', methods=['GET', 'POST'])
 def index():
-    return "Bot is running via Webhook!"
+    if request.method == 'POST':
+        # اینجا باید منطق دریافت پیام از تلگرام قرار بگیرد
+        # یا اگر از کتابخانه Telebot استفاده می‌کنید، 
+        # باید تابع webhook را اینجا صدا بزنید
+        bot.process_new_updates() 
+        return "OK", 200
+    return "Bot is running!"
 
 # تابع برای تنظیم اولیه Webhook
 def set_webhook():
