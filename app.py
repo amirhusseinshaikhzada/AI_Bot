@@ -80,15 +80,16 @@ def webhook():
             json_string = request.get_data().decode('utf-8')
             print("--- 2. JSON Data Received ---") # لاگ مرحله دوم
             update = telebot.types.Update.de_json(json_string)
-            print(f"--- 3. Update Decoded: {update.message.text if update.message else 'No message text'} ---") # لاگ متن پیام
-            
-            # در تابع webhook
+            print(f"--- 3. Update Decoded: {update.message.text if update.message else 'No message text'} ---")
+
             try:
                 print("--- Before bot.process_new_updates ---")
                 bot.process_new_updates([update])
                 print("--- After bot.process_new_updates ---")
-           except Exception as e:
-               print(f"!!! CRITICAL ERROR: {e}")
+            except Exception as e:
+                print(f"!!! CRITICAL ERROR: {e}")
+
+
                 
             return 'OK', 200
         print("--- Error: Not a JSON Request ---")
